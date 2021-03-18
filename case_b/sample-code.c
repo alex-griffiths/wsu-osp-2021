@@ -11,13 +11,14 @@
 /* a line can have at most MAX_LINE/2 words, why? */
 
 void tokenize(char *line, char **words, int *nwords);
-/* break line into words separated by whitespace, placing them in the 
-   array words, and setting the count to nwords */
+void find_and_execute(char **words);
 
 int main()
 {
         char line[MAX_LINE], *words[MAX_WORDS], message[MAX_LINE];
-        int stop=0,nwords=0;
+        int stop=0,nwords=0, c_id=0; /* c_id -> child process id */
+        int wait_rv; /* return value from waitpid */
+        int c_status; /* Status of child process */
 
         while(1)
         {
@@ -29,12 +30,44 @@ int main()
                 tokenize(line,words,&nwords);
 
                 /* More to do here */
+                /* Check for exit */
+                if (strcmp(words[0], "exit\n") && nwords == 1)
+                {
+                        /* 
+                         * Break out of loop. 
+                         * Let main program return as normal 
+                         */
+                        break;
+                } 
+                else if (strcmp(words[0], "exit\n") && nwords > 1)
+                {
+                        fprintf(stderr, "\e[1;31mError:\e[0m Unexpected argument for command: \e[1;33mexit\e[0m\n");
+                }
+
+                /* fork and run commands */
+                if ((c_id = fork()) == -1)
+                {
+                        perror("\e[1;31mError:\e[0m");
+                        return -1;
+                } else {
+                        find_and_execute(words);
+                        wait_rv = waitpid(c_id, &c_status, 0);
+                }
 
         }
         return 0;
 }
 
-/* this function works, it is up to you to work out why! */
+/*
+ * Repeatedly get the next word of the string using strtok
+ * and store it in words. 
+ *
+ * Use nwords for the index to insert the word into except for the first
+ * word which gets inserted at index 0.
+ *
+ * Keep doing this until we reach the max number of words, or there are
+ * no more tokens.
+ */
 void tokenize(char *line, char **words, int *nwords)
 {
         int i = 0;
@@ -43,11 +76,8 @@ void tokenize(char *line, char **words, int *nwords)
         for(words[0]=strtok(line," \t\n");
             (*nwords<MAX_WORDS)&&(words[*nwords]=strtok(NULL, " \t\n"));
             *nwords=*nwords+1
-           ); /* empty body */
+           );
 
-        while (i < *nwords) {
-                fprintf(stderr, "%s\n", *words[i]);
-        }
         return;
 }
 

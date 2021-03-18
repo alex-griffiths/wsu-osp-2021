@@ -1,5 +1,5 @@
 x Read input from user
-- Break line up into words
+x Break line up into words
 - Check for exit command
 - Find and execute command
   - Must use fork()
