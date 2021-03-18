@@ -63,5 +63,5 @@ uint8_t get_subfield(uint8_t value, uint8_t start, uint8_t stop)
 	 */
 	value = value >> (7 - (stop - start));
 
-	return;
+	return value;
 }

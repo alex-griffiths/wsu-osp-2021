@@ -1,0 +1,10 @@
+x Read input from user
+- Break line up into words
+- Check for exit command
+- Find and execute command
+  - Must use fork()
+  - Must use exec()
+- Check for success
+  - Use perror() if it does not work.
+- CLI process must pause until child process completes
+- Write cd command
