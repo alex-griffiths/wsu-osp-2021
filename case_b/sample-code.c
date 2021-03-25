@@ -11,14 +11,15 @@
 /* a line can have at most MAX_LINE/2 words, why? */
 
 void tokenize(char *line, char **words, int *nwords);
-void find_and_execute(char **words);
+void find_and_execute(char **arglist);
 
 int main()
 {
         char line[MAX_LINE], *words[MAX_WORDS], message[MAX_LINE];
-        int stop=0,nwords=0, c_id=0; /* c_id -> child process id */
+        int stop=0,nwords=0,c_id;/* c_id -> child process id */
         int wait_rv; /* return value from waitpid */
         int c_status; /* Status of child process */
+        int cmp_res; /* result from strcmp */
 
         while(1)
         {
@@ -31,7 +32,8 @@ int main()
 
                 /* More to do here */
                 /* Check for exit */
-                if (strcmp(words[0], "exit\n") && nwords == 1)
+                cmp_res = strcmp(words[0], "exit");
+                if (cmp_res == 0 && nwords == 1)
                 {
                         /* 
                          * Break out of loop. 
@@ -39,23 +41,54 @@ int main()
                          */
                         break;
                 } 
-                else if (strcmp(words[0], "exit\n") && nwords > 1)
+                else if (cmp_res == 0 && nwords > 1)
                 {
                         fprintf(stderr, "\e[1;31mError:\e[0m Unexpected argument for command: \e[1;33mexit\e[0m\n");
+                        continue;
                 }
 
                 /* fork and run commands */
                 if ((c_id = fork()) == -1)
                 {
                         perror("\e[1;31mError:\e[0m");
-                        return -1;
-                } else {
+                } 
+                else if (c_id == 0) 
+                {
+
                         find_and_execute(words);
-                        wait_rv = waitpid(c_id, &c_status, 0);
+
+                        /* Wait for child process to complete */
+                        waitpid(c_id, &c_status, 0);
+
+                        printf("CHILD STATUS: %d\r\n", c_status);
+
+                        /* 
+                         * Clear the memory of the words array for the 
+                         * next usage. Reset nwords so that new 
+                         * commands are inserted at the beginning of
+                         * the words array next iteration.
+                         */
+                        nwords = 0;
+                        memset(words, 0, MAX_LINE);
                 }
 
         }
         return 0;
+}
+
+
+/* 
+ * Execute the command in words and if there is any error
+ * output that error
+ */
+void find_and_execute(char **arglist) 
+{
+        int res = execvp(arglist[0], arglist);
+        if (res == -1) 
+        {
+                perror("\e[1;31mError:\e[0m");
+        }
+
 }
 
 /*
@@ -78,6 +111,9 @@ void tokenize(char *line, char **words, int *nwords)
             *nwords=*nwords+1
            );
 
+
+        /* Add null terminator to end of words array */
+        words[*nwords + 1] = 0;
         return;
 }
 
