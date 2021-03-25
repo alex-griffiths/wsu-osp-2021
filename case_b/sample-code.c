@@ -16,10 +16,7 @@ void find_and_execute(char **arglist);
 int main()
 {
         char line[MAX_LINE], *words[MAX_WORDS], message[MAX_LINE];
-        int stop=0,nwords=0,c_id;/* c_id -> child process id */
-        int wait_rv; /* return value from waitpid */
-        int c_status; /* Status of child process */
-        int cmp_res; /* result from strcmp */
+        int stop=0,nwords=0;/* c_id -> child process id */
 
         while(1)
         {
@@ -32,8 +29,7 @@ int main()
 
                 /* More to do here */
                 /* Check for exit */
-                cmp_res = strcmp(words[0], "exit");
-                if (cmp_res == 0 && nwords == 1)
+                if (strcmp(words[0], "exit") == 0 && nwords == 1)
                 {
                         /* 
                          * Break out of loop. 
@@ -41,37 +37,29 @@ int main()
                          */
                         break;
                 } 
-                else if (cmp_res == 0 && nwords > 1)
+                else if (strcmp(words[0], "exit") == 0 && nwords > 1)
                 {
                         fprintf(stderr, "\e[1;31mError:\e[0m Unexpected argument for command: \e[1;33mexit\e[0m\n");
                         continue;
                 }
+		else if (strcmp(words[0], "cd") == 0 && nwords > 1)
+		{
+			printf("Changing to directory: %s\r\n", words[1]);
+			chdir(words[1]);
+		}
+		else
+		{
+			find_and_execute(words);
+		}
 
-                /* fork and run commands */
-                if ((c_id = fork()) == -1)
-                {
-                        perror("\e[1;31mError:\e[0m");
-                } 
-                else if (c_id == 0) 
-                {
-
-                        find_and_execute(words);
-
-                        /* Wait for child process to complete */
-                        waitpid(c_id, &c_status, 0);
-
-                        printf("CHILD STATUS: %d\r\n", c_status);
-
-                        /* 
-                         * Clear the memory of the words array for the 
-                         * next usage. Reset nwords so that new 
-                         * commands are inserted at the beginning of
-                         * the words array next iteration.
-                         */
-                        nwords = 0;
-                        memset(words, 0, MAX_LINE);
-                }
-
+		/* 
+		 * Clear the memory of the words array for the 
+		 * next usage. Reset nwords so that new 
+		 * commands are inserted at the beginning of
+		 * the words array next iteration.
+		 */
+		nwords = 0;
+		memset(words, 0, MAX_LINE);
         }
         return 0;
 }
@@ -83,12 +71,28 @@ int main()
  */
 void find_and_execute(char **arglist) 
 {
-        int res = execvp(arglist[0], arglist);
-        if (res == -1) 
-        {
-                perror("\e[1;31mError:\e[0m");
-        }
+        int wait_rv, c_id; /* return value from waitpid */
+        int c_status; /* Status of child process */
+	/* fork and run commands */
+	if ((c_id = fork()) == -1)
+	{
+		perror("\e[1;31mError:\e[0m Failed to fork.\r\n");
+		exit(EXIT_FAILURE);
+	} 
+	else if (c_id == 0) 
+	{
+		int res = execvp(arglist[0], arglist);
+		if (res == -1) 
+		{
+			perror("\e[1;31mError:\e[0m");
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		/* Wait for child process to complete */
+		waitpid(c_id, &c_status, 0);
 
+		printf("CHILD STATUS: %d\r\n", c_status >> 8);
+	}
 }
 
 /*
